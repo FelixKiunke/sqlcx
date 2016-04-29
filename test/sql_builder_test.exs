@@ -1,5 +1,5 @@
-defmodule Sqlitex.SqlBuilderTest do
-  alias Sqlitex.SqlBuilder, as: Sql
+defmodule Sqlcx.SqlBuilderTest do
+  alias Sqlcx.SqlBuilder, as: Sql
   use ExUnit.Case
 
   test "basic table creation" do

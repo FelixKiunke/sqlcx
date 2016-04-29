@@ -1,4 +1,4 @@
-defmodule Sqlitex.SqlBuilder do
+defmodule Sqlcx.SqlBuilder do
   @moduledoc """
   This module contains functions for SQL creation. At the moment
   it is only used for `CREATE TABLE` statements.

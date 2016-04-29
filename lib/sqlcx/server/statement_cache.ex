@@ -1,4 +1,4 @@
-defmodule Sqlitex.Server.StatementCache do
+defmodule Sqlcx.Server.StatementCache do
   @moduledoc """
   Implements a least-recently used (LRU) cache for prepared SQLite statements.
 
@@ -35,7 +35,7 @@ defmodule Sqlitex.Server.StatementCache do
   end
 
   defp prepare_new_statement(%__MODULE__{db: db} = cache, sql, opts) do
-    case Sqlitex.Statement.prepare(db, sql, opts) do
+    case Sqlcx.Statement.prepare(db, sql, opts) do
       {:ok, prepared} ->
         cache = cache
           |> store_new_stmt(sql, prepared)

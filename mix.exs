@@ -1,14 +1,14 @@
-defmodule Sqlitex.Mixfile do
+defmodule Sqlcx.Mixfile do
   use Mix.Project
 
   def project do
     [
-      app: :sqlitex,
-      version: "1.7.1",
+      app: :sqlcx,
+      version: "1.1.0",
       elixir: "~> 1.4",
       deps: deps(),
       package: package(),
-      source_url: "https://github.com/elixir-sqlite/sqlitex",
+      source_url: "https://github.com/FelixKiunke/sqlcx",
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
         coveralls: :test,
@@ -18,7 +18,7 @@ defmodule Sqlitex.Mixfile do
         "coveralls.html": :test
       ],
       description: """
-      A thin Elixir wrapper around esqlite
+      A thin Elixir wrapper around esqlcipher
       """,
       dialyzer: [plt_add_deps: :transitive],
       # The main page in the docs
@@ -34,7 +34,7 @@ defmodule Sqlitex.Mixfile do
   # Type `mix help deps` for more examples and options
   defp deps do
     [
-      {:esqlite, "~> 0.4"},
+      {:esqlcipher, "~> 1.1"},
       {:decimal, "~> 2.0"},
       {:credo, "~> 0.10", only: [:dev, :test]},
       {:dialyxir, "~> 1.0.0", only: [:dev, :test], runtime: false},
@@ -47,10 +47,11 @@ defmodule Sqlitex.Mixfile do
 
   defp package do
     [
+      maintainers: ["Felix Kiunke"],
       licenses: ["MIT"],
       links: %{
-        "GitHub" => "https://github.com/elixir-sqlite/sqlitex",
-        "docs" => "http://hexdocs.pm/sqlitex"
+        "GitHub" => "https://github.com/FelixKiunke/sqlcx",
+        "docs" => "http://hexdocs.pm/sqlcx"
       }
     ]
   end

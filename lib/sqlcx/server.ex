@@ -1,29 +1,29 @@
-defmodule Sqlitex.Server do
+defmodule Sqlcx.Server do
   @moduledoc """
-  Sqlitex.Server provides a GenServer to wrap a sqlitedb.
-  This makes it easy to share a SQLite database between multiple processes without worrying about concurrency issues.
+  Sqlcx.Server provides a GenServer to wrap an sqlcipher db.
+  This makes it easy to share a SQLCipher database between multiple processes without worrying about concurrency issues.
   You can also register the process with a name so you can query by name later.
 
   ## Unsupervised Example
   ```
-  iex> {:ok, pid} = Sqlitex.Server.start_link(":memory:", [name: :example])
-  iex> Sqlitex.Server.exec(pid, "CREATE TABLE t (a INTEGER, b INTEGER)")
+  iex> {:ok, pid} = Sqlcx.Server.start_link(":memory:", [name: :example])
+  iex> Sqlcx.Server.exec(pid, "CREATE TABLE t (a INTEGER, b INTEGER)")
   :ok
-  iex> Sqlitex.Server.exec(pid, "INSERT INTO t (a, b) VALUES (1, 1), (2, 2), (3, 3)")
+  iex> Sqlcx.Server.exec(pid, "INSERT INTO t (a, b) VALUES (1, 1), (2, 2), (3, 3)")
   :ok
-  iex> Sqlitex.Server.query(pid, "SELECT * FROM t WHERE b = 2")
+  iex> Sqlcx.Server.query(pid, "SELECT * FROM t WHERE b = 2")
   {:ok, [[a: 2, b: 2]]}
-  iex> Sqlitex.Server.query(:example, "SELECT * FROM t ORDER BY a LIMIT 1", into: %{})
+  iex> Sqlcx.Server.query(:example, "SELECT * FROM t ORDER BY a LIMIT 1", into: %{})
   {:ok, [%{a: 1, b: 1}]}
-  iex> Sqlitex.Server.query_rows(:example, "SELECT * FROM t ORDER BY a LIMIT 2")
+  iex> Sqlcx.Server.query_rows(:example, "SELECT * FROM t ORDER BY a LIMIT 2")
   {:ok, %{rows: [[1, 1], [2, 2]], columns: [:a, :b], types: [:INTEGER, :INTEGER]}}
-  iex> Sqlitex.Server.prepare(:example, "SELECT * FROM t")
+  iex> Sqlcx.Server.prepare(:example, "SELECT * FROM t")
   {:ok, %{columns: [:a, :b], types: [:INTEGER, :INTEGER]}}
     # Subsequent queries using this exact statement will now operate more efficiently
     # because this statement has been cached.
-  iex> Sqlitex.Server.prepare(:example, "INVALID SQL")
+  iex> Sqlcx.Server.prepare(:example, "INVALID SQL")
   {:error, {:sqlite_error, 'near "INVALID": syntax error'}}
-  iex> Sqlitex.Server.stop(:example)
+  iex> Sqlcx.Server.stop(:example)
   :ok
   iex> :timer.sleep(10) # wait for the process to exit asynchronously
   iex> Process.alive?(pid)
@@ -36,7 +36,7 @@ defmodule Sqlitex.Server do
   import Supervisor.Spec
 
   children = [
-    worker(Sqlitex.Server, ["priv/my_db.sqlite3", [name: :my_db])
+    worker(Sqlcx.Server, ["priv/my_db.db", [name: :my_db])
   ]
 
   Supervisor.start_link(children, strategy: :one_for_one)
@@ -45,23 +45,23 @@ defmodule Sqlitex.Server do
 
   use GenServer
 
-  alias Sqlitex.Config
-  alias Sqlitex.Server.StatementCache, as: Cache
-  alias Sqlitex.Statement
+  alias Sqlcx.Config
+  alias Sqlcx.Server.StatementCache, as: Cache
+  alias Sqlcx.Statement
 
   @doc """
-  Starts a SQLite Server (GenServer) instance.
+  Starts a SQLCipher Server (GenServer) instance.
 
   In addition to the options that are typically provided to `GenServer.start_link/3`,
   you can also specify:
 
   - `stmt_cache_size: (positive_integer)` to override the default limit (20) of statements
     that are cached when calling `prepare/3`.
-  - `db_timeout: (positive_integer)` to override `:esqlite3`'s default timeout of 5000 ms for
-    interactions with the database. This can also be set in `config.exs` as `config :sqlitex, db_timeout: 5_000`.
-  - `db_chunk_size: (positive_integer)` to override `:esqlite3`'s default chunk_size of 5000 rows
+  - `db_timeout: (positive_integer)` to override `:esqlcipher`'s default timeout of 5000 ms for
+    interactions with the database. This can also be set in `config.exs` as `config :sqlcx, db_timeout: 5_000`.
+  - `db_chunk_size: (positive_integer)` to override `:esqlcipher`'s default chunk_size of 5000 rows
     to read from native sqlite and send to erlang process in one bulk.
-    This can also be set in `config.exs` as `config :sqlitex, db_chunk_size: 5_000`.
+    This can also be set in `config.exs` as `config :sqlcx, db_chunk_size: 5_000`.
   """
   def start_link(db_path, opts \\ []) do
     stmt_cache_size = Keyword.get(opts, :stmt_cache_size, 20)
@@ -77,14 +77,14 @@ defmodule Sqlitex.Server do
   def init({db_path, stmt_cache_size, config})
     when is_integer(stmt_cache_size) and stmt_cache_size > 0
   do
-    case Sqlitex.open(db_path, config) do
+    case Sqlcx.open(db_path, config) do
       {:ok, db} -> {:ok, {db, __MODULE__.StatementCache.new(db, stmt_cache_size), config}}
       {:error, reason} -> {:stop, reason}
     end
   end
 
   def handle_call({:exec, sql}, _from, {db, stmt_cache, config}) do
-    result = Sqlitex.exec(db, sql, config)
+    result = Sqlcx.exec(db, sql, config)
     {:reply, result, {db, stmt_cache, config}}
   end
 
@@ -110,19 +110,19 @@ defmodule Sqlitex.Server do
   end
 
   def handle_call({:create_table, name, table_opts, cols}, _from, {db, stmt_cache, config}) do
-    result = Sqlitex.create_table(db, name, table_opts, cols, config)
+    result = Sqlcx.create_table(db, name, table_opts, cols, config)
     {:reply, result, {db, stmt_cache, config}}
   end
 
   def handle_call({:set_update_hook, pid, opts}, _from, {db, stmt_cache, config}) do
-    result = Sqlitex.set_update_hook(db, pid, Keyword.merge(config, opts))
+    result = Sqlcx.set_update_hook(db, pid, Keyword.merge(config, opts))
     {:reply, result, {db, stmt_cache, config}}
   end
 
   def handle_call({:with_transaction, fun}, _from, {db, _stmt_cache, _config} = state) do
     pid = self()
     Process.put({:state, pid}, state)
-    result = Sqlitex.with_transaction(db, fn _db -> fun.(pid) end)
+    result = Sqlcx.with_transaction(db, fn _db -> fun.(pid) end)
     {:reply, result, Process.delete({:state, pid})}
   end
 
@@ -131,14 +131,14 @@ defmodule Sqlitex.Server do
   end
 
   def terminate(_reason, {db, _stmt_cache, config}) do
-    Sqlitex.close(db, config)
+    Sqlcx.close(db, config)
     :ok
   end
 
   ## Public API
 
   @doc """
-  Same as `Sqlitex.exec/3` but using the shared db connections saved in the GenServer state.
+  Same as `Sqlcx.exec/3` but using the shared db connections saved in the GenServer state.
 
   Returns the results otherwise.
   """
@@ -147,7 +147,7 @@ defmodule Sqlitex.Server do
   end
 
   @doc """
-  Same as `Sqlitex.Query.query/3` but using the shared db connections saved in the GenServer state.
+  Same as `Sqlcx.Query.query/3` but using the shared db connections saved in the GenServer state.
 
   Returns the results otherwise.
   """
@@ -156,7 +156,7 @@ defmodule Sqlitex.Server do
   end
 
   @doc """
-  Same as `Sqlitex.Query.query_rows/3` but using the shared db connections saved in the GenServer state.
+  Same as `Sqlcx.Query.query_rows/3` but using the shared db connections saved in the GenServer state.
 
   Returns the results otherwise.
   """
@@ -206,12 +206,12 @@ defmodule Sqlitex.Server do
     context of the server and therefore blocks other requests until it's finished.
 
     ## Examples
-      iex> {:ok, server} = Sqlitex.Server.start_link(":memory:")
-      iex> Sqlitex.Server.with_transaction(server, fn(db) ->
-      ...>   Sqlitex.Server.exec(db, "create table foo(id integer)")
-      ...>   Sqlitex.Server.exec(db, "insert into foo (id) values(42)")
+      iex> {:ok, server} = Sqlcx.Server.start_link(":memory:")
+      iex> Sqlcx.Server.with_transaction(server, fn(db) ->
+      ...>   Sqlcx.Server.exec(db, "create table foo(id integer)")
+      ...>   Sqlcx.Server.exec(db, "insert into foo (id) values(42)")
       ...> end)
-      iex> Sqlitex.Server.query(server, "select * from foo")
+      iex> Sqlcx.Server.query(server, "select * from foo")
       {:ok, [[{:id, 42}]]}
   """
   def with_transaction(pid, fun, opts \\ []) do

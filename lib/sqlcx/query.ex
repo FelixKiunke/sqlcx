@@ -1,9 +1,9 @@
-defmodule Sqlitex.Query do
+defmodule Sqlcx.Query do
   @moduledoc """
-  Functions for running queries against a SQLite database.
+  Functions for running queries against a SQLCipher database.
 
   These query functions handle details such as preparing a statement, binding values, etc.
-  If you need to deal with these details on your own, please take a look at the `Sqlitex.Statement` module.
+  If you need to deal with these details on your own, please take a look at the `Sqlcx.Statement` module.
   """
 
   @type query_option ::
@@ -12,14 +12,14 @@ defmodule Sqlitex.Query do
     | {:db_timeout, pos_integer}
     | {:db_chunk_size, pos_integer}
 
-  alias Sqlitex.Statement
+  alias Sqlcx.Statement
 
   @doc """
   Runs a query and returns the results.
 
   ## Parameters
 
-  * `db` - A SQLite database.
+  * `db` - An SQLCipher database.
   * `sql` - The query to run as a string.
   * `opts` - Options to pass into the query.  See below for details.
 
@@ -28,22 +28,17 @@ defmodule Sqlitex.Query do
   * `bind` - If your query has parameters in it, you should provide the options
     to bind as a list.
   * `into` - The collection to put results into.  This defaults to a list.
-  * `db_timeout` - The timeout (in ms) to apply to each of the underlying SQLite operations. Defaults
-    to `Application.get_env(:sqlitex, :db_timeout)` or `5000` ms if not configured.
+  * `db_timeout` - The timeout (in ms) to apply to each of the underlying SQLCipher operations. Defaults
+    to `Application.get_env(:sqlcx, :db_timeout)` or `5000` ms if not configured.
   * `db_chunk_size` - The number of rows to read from native sqlite and send to erlang process in one bulk.
-    Defaults to `Application.get_env(:sqlitex, :db_chunk_size)` or `5000` ms if not configured.
+    Defaults to `Application.get_env(:sqlcx, :db_chunk_size)` or `5000` ms if not configured.
 
   ## Returns
   * {:ok, [results...]} on success
   * {:error, _} on failure.
   """
-
-  if Version.compare(System.version, "1.3.0") == :lt do
-    @type charlist :: char_list
-  end
-
-  @spec query(Sqlitex.connection, String.t | charlist) :: {:ok, [keyword]} | {:error, term()}
-  @spec query(Sqlitex.connection, String.t | charlist, [query_option]) :: {:ok, [keyword]} | {:error, term()}
+  @spec query(Sqlcx.connection, String.t | charlist) :: {:ok, [keyword]} | {:error, term()}
+  @spec query(Sqlcx.connection, String.t | charlist, [query_option]) :: {:ok, [keyword]} | {:error, term()}
   def query(db, sql, opts \\ []) do
     with {:ok, stmt} <- Statement.prepare(db, sql, opts),
          {:ok, stmt} <- Statement.bind_values(stmt, Keyword.get(opts, :bind, []), opts),
@@ -52,15 +47,15 @@ defmodule Sqlitex.Query do
   end
 
   @doc """
-  Same as `query/3` but raises a Sqlitex.QueryError on error.
+  Same as `query/3` but raises a `Sqlcx.QueryError` on error.
 
   Returns the results otherwise.
   """
-  @spec query!(Sqlitex.connection, String.t | charlist) :: [keyword]
-  @spec query!(Sqlitex.connection, String.t | charlist, [query_option]) :: [Enum.t]
+  @spec query!(Sqlcx.connection, String.t | charlist) :: [keyword]
+  @spec query!(Sqlcx.connection, String.t | charlist, [query_option]) :: [Enum.t]
   def query!(db, sql, opts \\ []) do
     case query(db, sql, opts) do
-      {:error, reason} -> raise Sqlitex.QueryError, reason: reason
+      {:error, reason} -> raise Sqlcx.QueryError, reason: reason
       {:ok, results} -> results
     end
   end
@@ -71,7 +66,7 @@ defmodule Sqlitex.Query do
 
   ## Parameters
 
-  * `db` - A SQLite database.
+  * `db` - An SQLCipher database.
   * `sql` - The query to run as a string.
   * `opts` - Options to pass into the query.  See below for details.
 
@@ -79,18 +74,17 @@ defmodule Sqlitex.Query do
 
   * `bind` - If your query has parameters in it, you should provide the options
     to bind as a list.
-  * `db_timeout` - The timeout (in ms) to apply to each of the underlying SQLite operations. Defaults
-    to `Application.get_env(:sqlitex, :db_timeout)` or `5000` ms if not configured.
+  * `db_timeout` - The timeout (in ms) to apply to each of the underlying SQLCipher operations. Defaults
+    to `Application.get_env(:sqlcx, :db_timeout)` or `5000` ms if not configured.
   * `db_chunk_size` - The number of rows to read from native sqlite and send to erlang process in one bulk.
-    Defaults to `Application.get_env(:sqlitex, :db_chunk_size)` or `5000` ms if not configured.
+    Defaults to `Application.get_env(:sqlcx, :db_chunk_size)` or `5000` ms if not configured.
 
   ## Returns
   * {:ok, %{rows: [[1, 2], [2, 3]], columns: [:a, :b], types: [:INTEGER, :INTEGER]}} on success
   * {:error, _} on failure.
   """
-
-  @spec query_rows(Sqlitex.connection, String.t | charlist) :: {:ok, %{}} | Sqlitex.sqlite_error
-  @spec query_rows(Sqlitex.connection, String.t | charlist, [query_option]) :: {:ok, %{}} | Sqlitex.sqlite_error
+  @spec query_rows(Sqlcx.connection, String.t | charlist) :: {:ok, %{}} | Sqlcx.sqlite_error
+  @spec query_rows(Sqlcx.connection, String.t | charlist, [query_option]) :: {:ok, %{}} | Sqlcx.sqlite_error
   def query_rows(db, sql, opts \\ []) do
     with {:ok, stmt} <- Statement.prepare(db, sql, opts),
          {:ok, stmt} <- Statement.bind_values(stmt, Keyword.get(opts, :bind, []), opts),
@@ -99,15 +93,15 @@ defmodule Sqlitex.Query do
   end
 
   @doc """
-  Same as `query_rows/3` but raises a Sqlitex.QueryError on error.
+  Same as `query_rows/3` but raises a Sqlcx.QueryError on error.
 
   Returns the results otherwise.
   """
-  @spec query_rows!(Sqlitex.connection, String.t | charlist) :: %{}
-  @spec query_rows!(Sqlitex.connection, String.t | charlist, [query_option]) :: %{}
+  @spec query_rows!(Sqlcx.connection, String.t | charlist) :: %{}
+  @spec query_rows!(Sqlcx.connection, String.t | charlist, [query_option]) :: %{}
   def query_rows!(db, sql, opts \\ []) do
     case query_rows(db, sql, opts) do
-      {:error, reason} -> raise Sqlitex.QueryError, reason: reason
+      {:error, reason} -> raise Sqlcx.QueryError, reason: reason
       {:ok, results} -> results
     end
   end

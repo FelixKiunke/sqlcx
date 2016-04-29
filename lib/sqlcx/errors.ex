@@ -1,4 +1,4 @@
-defmodule Sqlitex.QueryError do
+defmodule Sqlcx.QueryError do
   defexception [:reason]
 
   def message(error) do
@@ -6,7 +6,7 @@ defmodule Sqlitex.QueryError do
   end
 end
 
-defmodule Sqlitex.Statement.PrepareError do
+defmodule Sqlcx.Statement.PrepareError do
   defexception [:reason]
 
   def message(error) do
@@ -14,7 +14,7 @@ defmodule Sqlitex.Statement.PrepareError do
   end
 end
 
-defmodule Sqlitex.Statement.BindValuesError do
+defmodule Sqlcx.Statement.BindValuesError do
   defexception [:reason]
 
   def message(error) do
@@ -22,7 +22,7 @@ defmodule Sqlitex.Statement.BindValuesError do
   end
 end
 
-defmodule Sqlitex.Statement.FetchAllError do
+defmodule Sqlcx.Statement.FetchAllError do
   defexception [:reason]
 
   def message(error) do
@@ -30,7 +30,7 @@ defmodule Sqlitex.Statement.FetchAllError do
   end
 end
 
-defmodule Sqlitex.Statement.ExecError do
+defmodule Sqlcx.Statement.ExecError do
   defexception [:reason]
 
   def message(error) do

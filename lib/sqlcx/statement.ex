@@ -1,5 +1,6 @@
-defmodule Sqlitex.Statement do
-  alias Sqlitex.Row
+defmodule Sqlcx.Statement do
+  alias Sqlcx.Row
+
   @moduledoc """
   Provides an interface for working with SQLite prepared statements.
 
@@ -13,17 +14,17 @@ defmodule Sqlitex.Statement do
   ## Example
 
   ```
-  iex(2)> {:ok, db} = Sqlitex.open(":memory:")
-  iex(3)> Sqlitex.query(db, "CREATE TABLE data (id, name);")
+  iex(2)> {:ok, db} = Sqlcx.open(":memory:")
+  iex(3)> Sqlcx.query(db, "CREATE TABLE data (id, name);")
   {:ok, []}
-  iex(4)> {:ok, statement} = Sqlitex.Statement.prepare(db, "INSERT INTO data VALUES (?, ?);")
-  iex(5)> Sqlitex.Statement.bind_values(statement, [1, "hello"])
-  iex(6)> Sqlitex.Statement.exec(statement)
+  iex(4)> {:ok, statement} = Sqlcx.Statement.prepare(db, "INSERT INTO data VALUES (?, ?);")
+  iex(5)> Sqlcx.Statement.bind_values(statement, [1, "hello"])
+  iex(6)> Sqlcx.Statement.exec(statement)
   :ok
-  iex(7)> {:ok, statement} = Sqlitex.Statement.prepare(db, "SELECT * FROM data;")
-  iex(8)> Sqlitex.Statement.fetch_all(statement, db_timeout: 1_000)
+  iex(7)> {:ok, statement} = Sqlcx.Statement.prepare(db, "SELECT * FROM data;")
+  iex(8)> Sqlcx.Statement.fetch_all(statement, db_timeout: 1_000)
   {:ok, [[id: 1, name: "hello"]]}
-  iex(9)> Sqlitex.close(db)
+  iex(9)> Sqlcx.close(db)
   :ok
 
   ```
@@ -73,10 +74,10 @@ defmodule Sqlitex.Statement do
             column_names: [],
             column_types: []
 
-  alias Sqlitex.Config
+  alias Sqlcx.Config
 
   @doc """
-  Prepare a Sqlitex.Statement
+  Prepare a Sqlcx.Statement
 
   ## Parameters
 
@@ -90,7 +91,7 @@ defmodule Sqlitex.Statement do
   ## Returns
 
   * `{:ok, statement}` on success
-  * See `:esqlite3.prepare` for errors.
+  * See `:esqlcipher.prepare` for errors.
   """
   def prepare(db, sql, opts \\ []) do
     timeout = Config.db_timeout(opts)
@@ -103,19 +104,19 @@ defmodule Sqlitex.Statement do
   end
 
   @doc """
-  Same as `prepare/3` but raises a Sqlitex.Statement.PrepareError on error.
+  Same as `prepare/3` but raises a Sqlcx.Statement.PrepareError on error.
 
   Returns a new statement otherwise.
   """
   def prepare!(db, sql, opts \\ []) do
     case prepare(db, sql, opts) do
       {:ok, statement} -> statement
-      {:error, reason} -> raise Sqlitex.Statement.PrepareError, reason: reason
+      {:error, reason} -> raise Sqlcx.Statement.PrepareError, reason: reason
     end
   end
 
   @doc """
-  Binds values to a Sqlitex.Statement.
+  Binds values to a Sqlcx.Statement
 
   ## Parameters
 
@@ -129,7 +130,7 @@ defmodule Sqlitex.Statement do
   ## Returns
 
   * `{:ok, statement}` on success
-  * See `:esqlite3.prepare` for errors.
+  * See `:esqlcipher.prepare` for errors.
 
   ## Value transformations
 
@@ -142,21 +143,21 @@ defmodule Sqlitex.Statement do
   * `%Decimal` -  Converted into a number.
   """
   def bind_values(statement, values, opts \\ []) do
-    case :esqlite3.bind(statement.statement, translate_bindings(values), Config.db_timeout(opts)) do
+    case :esqlcipher.bind(statement.statement, translate_bindings(values), Config.db_timeout(opts)) do
       {:error, _} = error -> error
       :ok -> {:ok, statement}
     end
   end
 
   @doc """
-  Same as `bind_values/3` but raises a Sqlitex.Statement.BindValuesError on error.
+  Same as `bind_values/3` but raises a Sqlcx.Statement.BindValuesError on error.
 
   Returns the statement otherwise.
   """
   def bind_values!(statement, values, opts \\ []) do
     case bind_values(statement, values, opts) do
       {:ok, statement} -> statement
-      {:error, reason} -> raise Sqlitex.Statement.BindValuesError, reason: reason
+      {:error, reason} -> raise Sqlcx.Statement.BindValuesError, reason: reason
     end
   end
 
@@ -190,21 +191,21 @@ defmodule Sqlitex.Statement do
   end
 
   defp raw_fetch_all(%__MODULE__{returning: nil, statement: statement}, opts) do
-    :esqlite3.fetchall(statement, Config.db_chunk_size(opts), Config.db_timeout(opts))
+    :esqlcipher.fetchall(statement, Config.db_chunk_size(opts), Config.db_timeout(opts))
   end
   defp raw_fetch_all(statement, opts) do
     returning_query(statement, opts)
   end
 
   @doc """
-  Same as `fetch_all/3` but raises a Sqlitex.Statement.FetchAllError on error.
+  Same as `fetch_all/3` but raises a Sqlcx.Statement.FetchAllError on error.
 
   Returns the results otherwise.
   """
   def fetch_all!(statement, opts) do
     case fetch_all(statement, opts) do
       {:ok, results} -> results
-      {:error, reason} -> raise Sqlitex.Statement.FetchAllError, reason: reason
+      {:error, reason} -> raise Sqlcx.Statement.FetchAllError, reason: reason
     end
   end
 
@@ -227,48 +228,48 @@ defmodule Sqlitex.Statement do
   * `{:error, error}`
   """
   def exec(statement, opts \\ []) do
-    case :esqlite3.step(statement.statement, Config.db_timeout(opts)) do
-      # esqlite3.step returns some odd values, so let's translate them:
+    case :esqlcipher.step(statement.statement, Config.db_timeout(opts)) do
+      # esqlcipher.step returns some odd values, so let's translate them:
       :"$done" -> :ok
-      :"$busy" -> {:error, {:busy, "Sqlite database is busy"}}
+      :"$busy" -> {:error, {:busy, "Sqlcipher database is busy"}}
       other -> other
     end
   end
 
   @doc """
-  Same as `exec/2` but raises a Sqlitex.Statement.ExecError on error.
+  Same as `exec/2` but raises a Sqlcx.Statement.ExecError on error.
 
   Returns :ok otherwise.
   """
   def exec!(statement, opts \\ []) do
     case exec(statement, opts) do
       :ok -> :ok
-      {:error, reason} -> raise Sqlitex.Statement.ExecError, reason: reason
+      {:error, reason} -> raise Sqlcx.Statement.ExecError, reason: reason
     end
   end
 
   defp do_prepare(db, sql, timeout) do
-    case :esqlite3.prepare(sql, db, timeout) do
+    case :esqlcipher.prepare(sql, db, timeout) do
       {:ok, statement} ->
-        {:ok, %Sqlitex.Statement{database: db, statement: statement}}
+        {:ok, %Sqlcx.Statement{database: db, statement: statement}}
       other -> other
     end
   end
 
-  defp get_column_names(%Sqlitex.Statement{statement: sqlite_statement} = statement, timeout) do
+  defp get_column_names(%Sqlcx.Statement{statement: sqlite_statement} = statement, timeout) do
     names =
       sqlite_statement
-      |> :esqlite3.column_names(timeout)
+      |> :esqlcipher.column_names(timeout)
       |> Tuple.to_list
-    {:ok, %Sqlitex.Statement{statement | column_names: names}}
+    {:ok, %Sqlcx.Statement{statement | column_names: names}}
   end
 
-  defp get_column_types(%Sqlitex.Statement{statement: sqlite_statement} = statement, timeout) do
+  defp get_column_types(%Sqlcx.Statement{statement: sqlite_statement} = statement, timeout) do
     types =
       sqlite_statement
-      |> :esqlite3.column_types(timeout)
+      |> :esqlcipher.column_types(timeout)
       |> Tuple.to_list
-    {:ok, %Sqlitex.Statement{statement | column_types: types}}
+    {:ok, %Sqlcx.Statement{statement | column_types: types}}
   end
 
   defp translate_bindings(params) do
@@ -373,7 +374,7 @@ defmodule Sqlitex.Statement do
 
     with {:ok, _} = db_exec(db, "CREATE TEMP TABLE #{temp_table} (#{temp_fields})"),
          {:ok, _} = db_exec(db, trigger),
-         result = :esqlite3.fetchall(statement, Config.db_chunk_size(opts), Config.db_timeout(opts)),
+         result = :esqlcipher.fetchall(statement, Config.db_chunk_size(opts), Config.db_timeout(opts)),
          {:ok, rows} = db_exec(db, "SELECT #{column_names} FROM #{temp_table}"),
          {:ok, _} = db_exec(db, "DROP TRIGGER IF EXISTS #{trigger_name}"),
          {:ok, _} = db_exec(db, "DROP TABLE IF EXISTS #{temp_table}")
@@ -391,9 +392,9 @@ defmodule Sqlitex.Statement do
     {:ok, _} = db_exec(db, "RELEASE #{sp}")
   end
 
-  @spec db_exec(Sqlitex.connection, iodata()) :: {:ok, [tuple()]}
+  @spec db_exec(Sqlcx.connection, iodata()) :: {:ok, [tuple()]}
   defp db_exec(db, sql) do
-    case :esqlite3.q(sql, db) do
+    case :esqlcipher.q(sql, db) do
       {:error, _} = error ->
         error
       result ->

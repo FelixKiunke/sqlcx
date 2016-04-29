@@ -1,6 +1,5 @@
-defmodule Sqlitex.Row do
+defmodule Sqlcx.Row do
   @moduledoc false
-
   def from(types, columns, rows, into) do
     for row <- rows do
       build_row(types, columns, row, into)

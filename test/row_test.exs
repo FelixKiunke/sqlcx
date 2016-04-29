@@ -1,6 +1,6 @@
-defmodule Sqlitex.RowTest do
+defmodule Sqlcx.RowTest do
   use ExUnit.Case
-  import Sqlitex.Row
+  import Sqlcx.Row
 
   test "supports the YYYY-MM-DD HH:MM format" do
     [row] = from([:datetime], [:test], [{"1988-02-14 15:17"}], %{})
