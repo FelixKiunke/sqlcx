@@ -3,6 +3,7 @@ defmodule Sqlcx.Test do
   doctest Sqlcx
 
   @shared_cache 'file::memory:?cache=shared'
+  @test_db [File.cwd!, "test", "test.db"] |> Path.join
 
   setup_all do
     {:ok, db} = Sqlcx.open(@shared_cache)
@@ -23,6 +24,18 @@ defmodule Sqlcx.Test do
     :ok = Sqlcx.Server.exec(conn, "CREATE TABLE blerps (id INTEGER PRIMARY KEY, val STRING);")
     :ok = Sqlcx.Server.exec(conn, "INSERT INTO blerps (val) VALUES ('this is a test');")
     assert_receive {:insert, 'blerps', 1}
+  end
+
+  test "encryption" do
+    try do
+      {:ok, db} = Sqlcx.open_encrypted(@test_db, <<1,2,0,3,4>>)
+      :ok = Sqlcx.exec(db, "CREATE TABLE test(a INT, b TEXT)")
+      :ok = Sqlcx.rekey(db, "abcd")
+      :ok = Sqlcx.close(db)
+      {:ok, _} = Sqlcx.open_encrypted(@test_db, "abcd")
+    after
+      File.rm!(@test_db)
+    end
   end
 
   test "server basic query" do

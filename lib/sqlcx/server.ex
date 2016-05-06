@@ -88,6 +88,11 @@ defmodule Sqlcx.Server do
     {:reply, result, {db, stmt_cache, config}}
   end
 
+  def handle_call({:rekey, password}, _from, {db, stmt_cache, config}) do
+    result = Sqlcx.rekey(db, password, config)
+    {:reply, result, {db, stmt_cache, config}}
+  end
+
   def handle_call({:query, sql, opts}, _from, {db, stmt_cache, config}) do
     case query_impl(sql, stmt_cache, Keyword.merge(config, opts)) do
       {:ok, result, new_cache} -> {:reply, {:ok, result}, {db, new_cache, config}}
@@ -144,6 +149,13 @@ defmodule Sqlcx.Server do
   """
   def exec(pid, sql, opts \\ []) do
     call(pid, {:exec, sql}, opts)
+  end
+
+  @doc """
+  Change the password used to encrypt the database.
+  """
+  def rekey(pid, password, opts \\ []) do
+    GenServer.call(pid, {:rekey, password}, timeout(opts))
   end
 
   @doc """
