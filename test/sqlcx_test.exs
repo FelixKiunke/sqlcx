@@ -39,7 +39,7 @@ defmodule Sqlcx.Test do
   end
 
   test "server basic query" do
-    {:ok, conn} = Sqlcx.Server.start_link(@shared_cache)
+    {:ok, conn} = Sqlcx.Server.start_link({@shared_cache, nil})
     {:ok, [row]} = Sqlcx.Server.query(conn, "SELECT * FROM players ORDER BY id LIMIT 1")
     assert row == [id: 1, name: "Mikey", created_at: {{2012, 10, 14}, {05, 46, 28, 318_107}}, updated_at: {{2013, 09, 06}, {22, 29, 36, 610_911}}, type: nil]
     Sqlcx.Server.stop(conn)
@@ -53,14 +53,14 @@ defmodule Sqlcx.Test do
   end
 
   test "server basic query by name" do
-    {:ok, _} = Sqlcx.Server.start_link(@shared_cache, name: :sql)
+    {:ok, _} = Sqlcx.Server.start_link({@shared_cache, nil}, name: :sql)
     {:ok, [row]} = Sqlcx.Server.query(:sql, "SELECT * FROM players ORDER BY id LIMIT 1")
     assert row == [id: 1, name: "Mikey", created_at: {{2012, 10, 14}, {05, 46, 28, 318_107}}, updated_at: {{2013, 09, 06}, {22, 29, 36, 610_911}}, type: nil]
     Sqlcx.Server.stop(:sql)
   end
 
   test "that it returns an error for a bad query" do
-    {:ok, _} = Sqlcx.Server.start_link(":memory:", name: :bad_create)
+    {:ok, _} = Sqlcx.Server.start_link({":memory:", nil}, name: :bad_create)
     assert {:error, {:sqlite_error, 'near "WHAT": syntax error'}} == Sqlcx.Server.query(:bad_create, "CREATE WHAT")
   end
 
@@ -215,7 +215,7 @@ defmodule Sqlcx.Test do
   end
 
   test "server query times out" do
-    {:ok, conn} = Sqlcx.Server.start_link(":memory:")
+    {:ok, conn} = Sqlcx.Server.start_link({":memory:", nil})
     assert match?({:timeout, _},
       catch_exit(Sqlcx.Server.query(conn, "SELECT * FROM sqlite_master", timeout: 0)))
     receive do # wait for the timed-out message

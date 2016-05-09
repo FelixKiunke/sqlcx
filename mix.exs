@@ -4,7 +4,7 @@ defmodule Sqlcx.Mixfile do
   def project do
     [
       app: :sqlcx,
-      version: "1.1.0",
+      version: "1.2.0",
       elixir: "~> 1.4",
       deps: deps(),
       package: package(),

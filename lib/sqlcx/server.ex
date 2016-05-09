@@ -67,7 +67,8 @@ defmodule Sqlcx.Server do
     stmt_cache_size = Keyword.get(opts, :stmt_cache_size, 20)
     config = [
       db_timeout: Config.db_timeout(opts),
-      db_chunk_size: Config.db_chunk_size(opts)
+      db_chunk_size: Config.db_chunk_size(opts),
+      db_password: Config.db_password(opts)
     ]
     GenServer.start_link(__MODULE__, {db_path, stmt_cache_size, config}, opts)
   end
@@ -78,7 +79,17 @@ defmodule Sqlcx.Server do
     when is_integer(stmt_cache_size) and stmt_cache_size > 0
   do
     case Sqlcx.open(db_path, config) do
-      {:ok, db} -> {:ok, {db, __MODULE__.StatementCache.new(db, stmt_cache_size), config}}
+      {:ok, db} ->
+        # Remove the password from config since it's only needed for opening db.
+        # However we remember whether the db was encrypted at all in order to
+        # throw an error when you try to rekey an unencrypted database
+        # (note that this is not easily possible in the non-Server version of
+        # the calls so those will silently ignore a rekey on an unencrypted db).
+        conf = config
+          |> Keyword.put(:is_encrypted, Keyword.get(config, :db_password) != nil)
+          |> Keyword.delete(:db_password)
+
+        {:ok, {db, __MODULE__.StatementCache.new(db, stmt_cache_size), conf}}
       {:error, reason} -> {:stop, reason}
     end
   end
@@ -89,8 +100,12 @@ defmodule Sqlcx.Server do
   end
 
   def handle_call({:rekey, password}, _from, {db, stmt_cache, config}) do
-    result = Sqlcx.rekey(db, password, config)
-    {:reply, result, {db, stmt_cache, config}}
+    if Keyword.get(config, :is_encrypted) do
+      result = Sqlcx.rekey(db, password, config)
+      {:reply, result, {db, stmt_cache, config}}
+    else
+      {:reply, {:error, "cannot rekey an unencrypted database"}, {db, stmt_cache, config}}
+    end
   end
 
   def handle_call({:query, sql, opts}, _from, {db, stmt_cache, config}) do

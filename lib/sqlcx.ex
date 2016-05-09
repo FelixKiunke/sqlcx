@@ -63,13 +63,11 @@ defmodule Sqlcx do
   @spec open(string_or_charlist) :: {:ok, connection} | {:error, {atom, charlist}}
   @spec open(string_or_charlist, Keyword.t) :: {:ok, connection} | {:error, {atom, charlist}}
   def open(path, opts \\ []) do
-    :esqlcipher.open(to_charlist(path), Config.db_timeout(opts))
-  end
-
-  @spec open_encrypted(string_or_charlist, String.t) :: {:ok, connection} | {:error, {atom, charlist}}
-  @spec open_encrypted(string_or_charlist, String.t, Keyword.t) :: {:ok, connection} | {:error, {atom, charlist}}
-  def open_encrypted(path, password, opts \\ []) do
-    :esqlcipher.open_encrypted(to_charlist(path), password, Config.db_timeout(opts))
+    case Config.db_password(opts) do
+      nil -> :esqlcipher.open(to_charlist(path), Config.db_timeout(opts))
+      password ->
+        :esqlcipher.open_encrypted(to_charlist(path), password, Config.db_timeout(opts))
+    end
   end
 
   @spec rekey(connection, String.t) :: :ok | sqlite_error
@@ -84,13 +82,6 @@ defmodule Sqlcx do
       close(db, opts)
       res
     end
-  end
-
-  def with_encrypted_db(path, password, fun, opts \\ []) do
-    {:ok, db} = open_encrypted(path, password, opts)
-    res = fun.(db)
-    close(db, opts)
-    res
   end
 
   @doc """

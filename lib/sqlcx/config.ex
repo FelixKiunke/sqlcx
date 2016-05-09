@@ -15,8 +15,11 @@ defmodule Sqlcx.Config do
     Keyword.get(opts, :db_timeout, Application.get_env(:sqlcx, :db_timeout, @default_db_timeout))
   end
 
-  def  db_chunk_size(opts \\ []) do
+  def db_chunk_size(opts \\ []) do
     Keyword.get(opts, :db_chunk_size, Application.get_env(:sqlcx, :db_chunk_size, @default_db_chunk_size))
   end
 
+  def db_password(opts \\ []) do
+    Keyword.get(opts, :db_chunk_size, Application.get_env(:sqlcx, :db_password, nil))
+  end
 end

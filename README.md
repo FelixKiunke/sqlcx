@@ -50,14 +50,16 @@ end)
 
 If you want to keep the database open during the lifetime of your project you can use the `Sqlcx.Server` GenServer module.
 
+`start_link` takes an options [db_password: "password"] tuple; password can be `nil`.
+
 Here's a sample from a phoenix projects main supervisor definition.
 
 ```elixir
 children = [
-  # Start the endpoint when the application starts
-  worker(Golf.Endpoint, []),
-  worker(Sqlcx.Server, ['golf.db', [name: Golf.DB]])
-]
+      # Start the endpoint when the application starts
+      worker(Golf.Endpoint, []),
+      worker(Sqlcx.Server, ["golf.db", [db_password: "password", name: Gold.DB]])
+    ]
 ```
 
 Now that the GenServer is running you can make queries via
