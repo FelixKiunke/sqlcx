@@ -81,13 +81,7 @@ defmodule Sqlcx.Server do
     case Sqlcx.open(db_path, config) do
       {:ok, db} ->
         # Remove the password from config since it's only needed for opening db.
-        # However we remember whether the db was encrypted at all in order to
-        # throw an error when you try to rekey an unencrypted database
-        # (note that this is not easily possible in the non-Server version of
-        # the calls so those will silently ignore a rekey on an unencrypted db).
-        conf = config
-          |> Keyword.put(:is_encrypted, Keyword.get(config, :db_password) != nil)
-          |> Keyword.delete(:db_password)
+        conf = Keyword.delete(config, :db_password)
 
         {:ok, {db, __MODULE__.StatementCache.new(db, stmt_cache_size), conf}}
       {:error, reason} -> {:stop, reason}
@@ -99,13 +93,9 @@ defmodule Sqlcx.Server do
     {:reply, result, {db, stmt_cache, config}}
   end
 
-  def handle_call({:rekey, password}, _from, {db, stmt_cache, config}) do
-    if Keyword.get(config, :is_encrypted) do
-      result = Sqlcx.rekey(db, password, config)
-      {:reply, result, {db, stmt_cache, config}}
-    else
-      {:reply, {:error, "cannot rekey an unencrypted database"}, {db, stmt_cache, config}}
-    end
+  def handle_call({:rekey, password, opts}, _from, {db, stmt_cache, config}) do
+    result = Sqlcx.rekey(db, password, Keyword.merge(config, opts))
+    {:reply, result, {db, stmt_cache, config}}
   end
 
   def handle_call({:query, sql, opts}, _from, {db, stmt_cache, config}) do
@@ -170,7 +160,7 @@ defmodule Sqlcx.Server do
   Change the password used to encrypt the database.
   """
   def rekey(pid, password, opts \\ []) do
-    GenServer.call(pid, {:rekey, password}, timeout(opts))
+    GenServer.call(pid, {:rekey, password, opts}, opts)
   end
 
   @doc """

@@ -3,7 +3,6 @@ defmodule Sqlcx.Test do
   doctest Sqlcx
 
   @shared_cache 'file::memory:?cache=shared'
-  @test_db [File.cwd!, "test", "test.db"] |> Path.join
 
   setup_all do
     {:ok, db} = Sqlcx.open(@shared_cache)
@@ -26,26 +25,30 @@ defmodule Sqlcx.Test do
     assert_receive {:insert, 'blerps', 1}
   end
 
-  test "encryption" do
+  @tag :tmp_dir
+  test "encryption", %{tmp_dir: tmp_dir} do
+    assert File.dir?(tmp_dir)
+    filename = Path.join(tmp_dir, "test_enc.db")
+
     try do
-      {:ok, db} = Sqlcx.open_encrypted(@test_db, <<1,2,0,3,4>>)
+      {:ok, db} = Sqlcx.open(filename, db_password: <<1, 2, 0, 3, 4>>)
       :ok = Sqlcx.exec(db, "CREATE TABLE test(a INT, b TEXT)")
       :ok = Sqlcx.rekey(db, "abcd")
       :ok = Sqlcx.close(db)
-      {:ok, _} = Sqlcx.open_encrypted(@test_db, "abcd")
+      {:ok, _} = Sqlcx.open(filename, db_password: "abcd")
     after
-      File.rm!(@test_db)
+      File.rm!(filename)
     end
   end
 
   test "server basic query" do
-    {:ok, conn} = Sqlcx.Server.start_link({@shared_cache, nil})
+    {:ok, conn} = Sqlcx.Server.start_link(@shared_cache)
     {:ok, [row]} = Sqlcx.Server.query(conn, "SELECT * FROM players ORDER BY id LIMIT 1")
     assert row == [id: 1, name: "Mikey", created_at: {{2012, 10, 14}, {05, 46, 28, 318_107}}, updated_at: {{2013, 09, 06}, {22, 29, 36, 610_911}}, type: nil]
     Sqlcx.Server.stop(conn)
   end
 
-  test "server basic query with db_timeout and db_chink_size" do
+  test "server basic query with db_timeout and db_chunk_size" do
     {:ok, conn} = Sqlcx.Server.start_link(@shared_cache)
     {:ok, [row]} = Sqlcx.Server.query(conn, "SELECT * FROM players ORDER BY id LIMIT 1", db_timeout: 1_000, db_chunk_size: 10)
     assert row == [id: 1, name: "Mikey", created_at: {{2012, 10, 14}, {05, 46, 28, 318_107}}, updated_at: {{2013, 09, 06}, {22, 29, 36, 610_911}}, type: nil]
@@ -53,14 +56,14 @@ defmodule Sqlcx.Test do
   end
 
   test "server basic query by name" do
-    {:ok, _} = Sqlcx.Server.start_link({@shared_cache, nil}, name: :sql)
+    {:ok, _} = Sqlcx.Server.start_link(@shared_cache, name: :sql)
     {:ok, [row]} = Sqlcx.Server.query(:sql, "SELECT * FROM players ORDER BY id LIMIT 1")
     assert row == [id: 1, name: "Mikey", created_at: {{2012, 10, 14}, {05, 46, 28, 318_107}}, updated_at: {{2013, 09, 06}, {22, 29, 36, 610_911}}, type: nil]
     Sqlcx.Server.stop(:sql)
   end
 
   test "that it returns an error for a bad query" do
-    {:ok, _} = Sqlcx.Server.start_link({":memory:", nil}, name: :bad_create)
+    {:ok, _} = Sqlcx.Server.start_link(":memory:", name: :bad_create)
     assert {:error, {:sqlite_error, 'near "WHAT": syntax error'}} == Sqlcx.Server.query(:bad_create, "CREATE WHAT")
   end
 
@@ -215,7 +218,7 @@ defmodule Sqlcx.Test do
   end
 
   test "server query times out" do
-    {:ok, conn} = Sqlcx.Server.start_link({":memory:", nil})
+    {:ok, conn} = Sqlcx.Server.start_link(":memory:")
     assert match?({:timeout, _},
       catch_exit(Sqlcx.Server.query(conn, "SELECT * FROM sqlite_master", timeout: 0)))
     receive do # wait for the timed-out message

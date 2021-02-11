@@ -1,5 +1,5 @@
 defmodule Sqlcx do
-  @type connection :: {:connection, reference(), reference()}
+  @type connection :: {:connection, reference(), reference(), :encrypted | :plaintext}
   @type string_or_charlist :: string_or_charlist
   @type sqlite_error :: {:error, {:sqlite_error, charlist}}
 
@@ -64,16 +64,45 @@ defmodule Sqlcx do
   @spec open(string_or_charlist, Keyword.t) :: {:ok, connection} | {:error, {atom, charlist}}
   def open(path, opts \\ []) do
     case Config.db_password(opts) do
-      nil -> :esqlcipher.open(to_charlist(path), Config.db_timeout(opts))
+      nil ->
+        :esqlcipher.open(to_charlist(path), Config.db_timeout(opts))
       password ->
         :esqlcipher.open_encrypted(to_charlist(path), password, Config.db_timeout(opts))
     end
   end
 
+  @spec open!(string_or_charlist) :: connection
+  @spec open!(string_or_charlist, Keyword.t()) :: connection
+  def open!(path, opts \\ []) do
+    case open(path, opts) do
+      {:error, reason} ->
+        raise Sqlcx.OpenError,
+          reason: reason,
+          encrypted: Config.db_password(opts) != nil
+
+      {:ok, connection} ->
+        connection
+    end
+  end
+
+  @spec is_encrypted(connection) :: boolean()
+  def is_encrypted(connection) do
+    :esqlcipher.is_encrypted(connection)
+  end
+
   @spec rekey(connection, String.t) :: :ok | sqlite_error
   @spec rekey(connection, String.t, Keyword.t) :: :ok | sqlite_error
   def rekey(db, password, opts \\ []) do
-    :esqlcipher.rekey(password, db)
+    :esqlcipher.rekey(password, db, Config.db_timeout(opts))
+  end
+
+  @spec rekey!(connection, String.t()) :: :ok
+  @spec rekey!(connection, String.t(), Keyword.t()) :: :ok
+  def rekey!(db, password, opts \\ []) do
+    case rekey(db, password, opts) do
+      {:error, reason} -> raise Sqlcx.RekeyError, reason: reason
+      :ok -> :ok
+    end
   end
 
   def with_db(path, fun, opts \\ []) do

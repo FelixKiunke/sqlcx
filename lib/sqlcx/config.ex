@@ -20,6 +20,6 @@ defmodule Sqlcx.Config do
   end
 
   def db_password(opts \\ []) do
-    Keyword.get(opts, :db_chunk_size, Application.get_env(:sqlcx, :db_password, nil))
+    Keyword.get(opts, :db_password, Application.get_env(:sqlcx, :db_password, nil))
   end
 end

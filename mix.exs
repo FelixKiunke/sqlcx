@@ -34,7 +34,7 @@ defmodule Sqlcx.Mixfile do
   # Type `mix help deps` for more examples and options
   defp deps do
     [
-      {:esqlcipher, "~> 1.1"},
+      {:esqlcipher, "~> 1.1.2"},
       {:decimal, "~> 2.0"},
       {:credo, "~> 0.10", only: [:dev, :test]},
       {:dialyxir, "~> 1.0.0", only: [:dev, :test], runtime: false},

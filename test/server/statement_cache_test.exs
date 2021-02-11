@@ -1,11 +1,11 @@
-defmodule Sqlitex.Server.StatementCacheTest do
+defmodule Sqlcx.Server.StatementCacheTest do
   use ExUnit.Case
 
-  alias Sqlitex.Server.StatementCache, as: S
-  alias Sqlitex.Statement, as: Stmt
+  alias Sqlcx.Server.StatementCache, as: S
+  alias Sqlcx.Statement, as: Stmt
 
   test "basic happy path" do
-    {:ok, db} = Sqlitex.open(":memory:")
+    {:ok, db} = Sqlcx.open(":memory:")
 
     cache = S.new(db, 3)
     assert %S{cached_stmts: %{}, db: _, limit: 3, lru: [], size: 0} = cache
@@ -30,7 +30,7 @@ defmodule Sqlitex.Server.StatementCacheTest do
   end
 
   test "relays error in prepare" do
-    {:ok, db} = Sqlitex.open(":memory:")
+    {:ok, db} = Sqlcx.open(":memory:")
     cache = S.new(db, 3)
 
     assert {:error, {:sqlite_error, 'near "bogus": syntax error'}}

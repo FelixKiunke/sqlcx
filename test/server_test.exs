@@ -1,9 +1,9 @@
-defmodule Sqlitex.ServerTest do
+defmodule Sqlcx.ServerTest do
   use ExUnit.Case
-  doctest Sqlitex.Server
+  doctest Sqlcx.Server
 
   test "with_transaction commit" do
-    alias Sqlitex.Server
+    alias Sqlcx.Server
 
     {:ok, server} = Server.start_link(':memory:')
     :ok = Server.exec(server, "create table foo(id integer)")
@@ -16,7 +16,7 @@ defmodule Sqlitex.ServerTest do
   end
 
   test "with_transaction rollback" do
-    alias Sqlitex.Server
+    alias Sqlcx.Server
 
     {:ok, server} = Server.start_link(':memory:')
     :ok = Server.exec(server, "create table foo(id integer)")
